@@ -32,18 +32,6 @@ class GeneratorTreeTests extends FunSuite {
     }
   }
 
-  test("Test Skipping of traversal nodes") {
-    val expected =
-      """ - Defn.Object: Foo
-        |   - Defn.Object: Bar""".stripMargin
-
-    val gTree = GeneratorTree(q"object Foo { object Bar }")
-    val shown = GeneratorTree.genTraversalString(ownerTraversal, gTree)
-    withClue("\nShown:\n" + shown + "\n\n") {
-      assert(expected == shown)
-    }
-  }
-
   val src: Source =
     source"""package org.scala.meta
 
@@ -132,21 +120,6 @@ class GeneratorTreeTests extends FunSuite {
       |           - Term.Name: bar
       |           - Lit.Int""".stripMargin
 
-  // Note: If we were to support anon classes
-  // and functions this would be different
-  val owner: String =
-    """ - Source
-      |   - Pkg: org.scala.meta.meta
-      |     - Defn.Class: Baz
-      |       - Defn.Def: blargh
-      |           - Defn.Val: foo
-      |               - Defn.Object: Bar
-      |                   - Defn.Val: foo
-      |                       - Defn.Val: baz
-      |                             - Defn.Val: bar
-      |     - Defn.Object: Foo
-      |       - Defn.Def: bar""".stripMargin
-
   val generators: String =
     """ - Defn.Object: Foo""".stripMargin
 
@@ -165,24 +138,6 @@ class GeneratorTreeTests extends FunSuite {
                 |=====================
                 |""".stripMargin) {
       assert(raw == ot.show)
-    }
-  }
-
-  test("Owner") {
-    val str = GeneratorTree.genTraversalString(ownerTraversal, ot)
-    withClue(s"""
-                |=====================
-                |      Expected
-                |=====================
-                |$owner
-                |=====================
-                |      Actual
-                |=====================
-                |$str
-                |=====================
-                |""".stripMargin) {
-
-      assert(owner == str)
     }
   }
 

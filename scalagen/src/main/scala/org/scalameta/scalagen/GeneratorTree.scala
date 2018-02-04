@@ -116,15 +116,6 @@ object GeneratorTree {
   val regularTraversal: Traversal[GeneratorTreeF[Tree], Tree] =
     Traversal.fromTraverse[GeneratorTreeF, Tree](Traverse[GeneratorTreeF])
 
-  val ownerPrism: Prism[GeneratorTree, GeneratorTree] =
-    Prism[GeneratorTree, GeneratorTree](t => {
-      if (t.head.isOwner) Some(t)
-      else None
-    })(identity)
-
-  val ownerTraversal: Traversal[GeneratorTreeF[Tree], Tree] =
-    ownerPrism.composeTraversal(regularTraversal)
-
   def generatorPrism(gs: Set[Generator]): Prism[GeneratorTree, GeneratorTree] =
     Prism[GeneratorTree, GeneratorTree](t => {
       if (hasGenerator(t.head, gs)) Some(t)
@@ -145,8 +136,7 @@ object GeneratorTree {
       .exists(_.exists(hasMatchingGenerator(_, gs)))
 
   def generatorTraversal(gs: Set[Generator]): Traversal[GeneratorTree, Tree] =
-    ownerPrism
-      .composePrism(generatorPrism(gs))
+    generatorPrism(gs)
       .composeTraversal(regularTraversal)
 
 }
