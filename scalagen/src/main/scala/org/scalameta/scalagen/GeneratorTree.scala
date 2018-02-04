@@ -9,6 +9,8 @@ import scala.meta.{XtensionShow => _, _}
 import scala.meta.gen.TypeclassExtractors.retrieveAnnotExtractInstance
 import scala.meta.gen._
 
+case class GeneratorInputContext[A <: Tree : ModReplacer](in: A, generators: List[Generator])
+
 object GeneratorTree {
 
   /**
@@ -123,17 +125,22 @@ object GeneratorTree {
     })(identity)
 
   private def hasMatchingGenerator(a: Mod.Annot, gs: Set[Generator]): Boolean =
-    gs.exists { g =>
-      a.init.tpe match {
-        case Type.Name(value) => g.name == value
-        case _ => false
-      }
+    getMatchingGenerator(a, gs).isDefined
+
+  private def getMatchingGenerator(a: Mod.Annot, gs: Set[Generator]): Option[Generator] =
+    a.init.tpe match {
+      case Type.Name(value) =>
+        gs.find(_.name == value)
+      case _ => None
     }
 
-  private def hasGenerator(tree: Tree, gs: Set[Generator]): Boolean =
+  def gatherGenerators(tree: Tree, gs: Set[Generator]): List[Generator] =
     retrieveAnnotExtractInstance(tree)
-      .map(_.extract(tree))
-      .exists(_.exists(hasMatchingGenerator(_, gs)))
+      .map(_.extract(tree).flatMap(getMatchingGenerator(_, gs).toList))
+      .getOrElse(Nil)
+
+  private def hasGenerator(tree: Tree, gs: Set[Generator]): Boolean =
+    gatherGenerators(tree, gs).nonEmpty
 
   def generatorTraversal(gs: Set[Generator]): Traversal[GeneratorTree, Tree] =
     generatorPrism(gs)

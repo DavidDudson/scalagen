@@ -1,15 +1,13 @@
 package org.scalameta.scalagen
 
-import org.scalatest.FunSuite
+import cats.implicits._
+import org.scalameta.scalagen.GeneratorTree._
+import org.scalatest.{FunSuite, Matchers}
 
-import scala.meta.Tree
 import scala.meta.Source
 import scala.meta.quasiquotes._
-import GeneratorTree._
-import cats._
-import cats.implicits._
 
-class GeneratorTreeTests extends FunSuite {
+class GeneratorTreeTests extends FunSuite with Matchers {
 
   test("Proof that generator tree tailForced is identical to calling children") {
     val obj = q"object Foo"
@@ -159,5 +157,37 @@ class GeneratorTreeTests extends FunSuite {
 
       assert(generators == str)
     }
+  }
+
+  test("Gather Generators given single generator") {
+    val clazz = q"@DeleteMe class Foo"
+
+    val generators = GeneratorTree.gatherGenerators(clazz, Set(DeleteMe))
+
+    generators should contain only DeleteMe
+  }
+
+  test("Gather Generators given duplicate generator") {
+    val clazz = q"@DeleteMe @DeleteMe class Foo"
+
+    val generators = GeneratorTree.gatherGenerators(clazz, Set(DeleteMe))
+
+    generators.size should equal(2)
+  }
+
+  test("Gather Generators given multiple generator") {
+    val clazz = q"@PrintHi @DeleteMe class Foo"
+
+    val generators = GeneratorTree.gatherGenerators(clazz, Set(PrintHi, DeleteMe))
+
+    generators should contain inOrderOnly (PrintHi, DeleteMe)
+  }
+
+  test("Gather Generators given multiple annotation but single generator") {
+    val clazz = q"@PrintHi @DeleteMe class Foo"
+
+    val generators = GeneratorTree.gatherGenerators(clazz, Set(DeleteMe))
+
+    generators should contain only DeleteMe
   }
 }
