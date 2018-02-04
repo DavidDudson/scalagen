@@ -7,8 +7,8 @@ import scala.meta.gen._
 
 object Runner2 {
 
-  def apply(t: Tree, gens: Set[Generator]): Option[Tree] =
-    expandGenerators(GeneratorTree(t), gens)
-
-  private def expandGenerators(t: GeneratorTree, gs: Set[Generator]): Option[Tree] = ???
+  def apply(t: Tree, gens: Set[Generator]): Option[Tree] = {
+    val traversal = GeneratorTree.generatorTraversal(gens)
+    ???
+  }
 }

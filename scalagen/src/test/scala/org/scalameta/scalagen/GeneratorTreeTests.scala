@@ -4,7 +4,7 @@ import cats.implicits._
 import org.scalameta.scalagen.GeneratorTree._
 import org.scalatest.{FunSuite, Matchers}
 
-import scala.meta.Source
+import scala.meta.{Source, Tree}
 import scala.meta.quasiquotes._
 
 class GeneratorTreeTests extends FunSuite with Matchers {
@@ -141,7 +141,7 @@ class GeneratorTreeTests extends FunSuite with Matchers {
 
   test("Generators") {
 
-    val str = GeneratorTree.genTraversalString(generatorTraversal(Set(DeleteMe)), ot)
+    val str = GeneratorTree.genTraversalString[Tree, GeneratorInputContext](generatorTraversal(Set(DeleteMe)), ot, _.in)
 
     withClue(s"""
                 |=====================

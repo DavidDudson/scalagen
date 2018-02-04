@@ -4,12 +4,13 @@ import cats._
 import cats.free._
 import cats.implicits._
 import monocle._
+import org.scalameta.scalagen.GeneratorTree.GeneratorTreeF
 
 import scala.meta.{XtensionShow => _, _}
 import scala.meta.gen.TypeclassExtractors.retrieveAnnotExtractInstance
 import scala.meta.gen._
 
-case class GeneratorInputContext[A <: Tree : ModReplacer](in: A, generators: List[Generator])
+case class GeneratorInputContext(in: Tree, generators: List[Generator])
 
 object GeneratorTree {
 
@@ -18,7 +19,7 @@ object GeneratorTree {
     *
     * Cofree objects are only created as the tree is traversed.
     */
-  def apply(t: Tree): GeneratorTree =
+  def apply(t: Tree): GeneratorTreeF[Tree] =
     Cofree(t, Eval.later(t.children.map(apply)))
 
   /**
@@ -30,16 +31,19 @@ object GeneratorTree {
     *  - Defn.Var
     *    - Defn.Def
     */
-  implicit def treeShowInstance: Show[GeneratorTree] =
-    Show.show[GeneratorTree](genTraversalString(regularTraversal, _))
+  implicit def treeShowInstance: Show[GeneratorTreeF[Tree]] =
+    Show.show[GeneratorTreeF[Tree]](genTraversalString(regularTraversal[Tree], _, identity[Tree]))
+
+  implicit def treeCtxShowInstance: Show[GeneratorTree] =
+    _.map(_.in).show
 
   /**
     * Will print all nodes visited by the given traversal
     */
-  def genTraversalString(t: Traversal[GeneratorTreeF[Tree], Tree], ot: GeneratorTree): String = {
+  def genTraversalString[A, B](t: Traversal[GeneratorTreeF[A], B], ot: GeneratorTreeF[A], f: B => Tree): String = {
     val childString =
       ot.tailForced
-        .map(genTraversalString(t, _))
+        .map(genTraversalString(t, _, f))
         .filterNot(_.isEmpty)
         .flatMap(_.lines.toList)
         .mkString("\n  ")
@@ -50,10 +54,10 @@ object GeneratorTree {
       case None =>
         error(childString)
         childString
-      case Some(tree) if childString.isEmpty =>
-        s" - ${treePrefixAndName(tree)}"
-      case Some(tree) =>
-        s""" - ${treePrefixAndName(tree)}
+      case Some(a) if childString.isEmpty =>
+        s" - ${treePrefixAndName(f(a))}"
+      case Some(a) =>
+        s""" - ${treePrefixAndName(f(a))}
            |  $childString""".stripMargin
     }
 
@@ -108,24 +112,21 @@ object GeneratorTree {
     *
     * TODO: Consider moving this out of scalagen
     */
-  type GeneratorTree = Cofree[List, Tree]
+  type GeneratorTree = Cofree[List, GeneratorInputContext]
 
   /**
     * Partially applied alias for OwnerTree. Allows use as a Functor/Monad etc.
     */
   type GeneratorTreeF[A] = Cofree[List, A]
 
-  val regularTraversal: Traversal[GeneratorTreeF[Tree], Tree] =
-    Traversal.fromTraverse[GeneratorTreeF, Tree](Traverse[GeneratorTreeF])
+  def regularTraversal[A]: Traversal[GeneratorTreeF[A], A] =
+    Traversal.fromTraverse[GeneratorTreeF, A](Traverse[GeneratorTreeF])
 
-  def generatorPrism(gs: Set[Generator]): Prism[GeneratorTree, GeneratorTree] =
-    Prism[GeneratorTree, GeneratorTree](t => {
-      if (hasGenerator(t.head, gs)) Some(t)
-      else None
-    })(identity)
-
-  private def hasMatchingGenerator(a: Mod.Annot, gs: Set[Generator]): Boolean =
-    getMatchingGenerator(a, gs).isDefined
+  def generatorInputPrism(gs: Set[Generator]): Prism[GeneratorTreeF[Tree], GeneratorTree] =
+    Prism[GeneratorTreeF[Tree], GeneratorTree](t => {
+      Option[GeneratorTree](t.map(GeneratorInputContext(_, gatherGenerators(t.head, gs))))
+        .filter(_.head.generators.nonEmpty)
+    })(_.map(_.in))
 
   private def getMatchingGenerator(a: Mod.Annot, gs: Set[Generator]): Option[Generator] =
     a.init.tpe match {
@@ -142,8 +143,8 @@ object GeneratorTree {
   private def hasGenerator(tree: Tree, gs: Set[Generator]): Boolean =
     gatherGenerators(tree, gs).nonEmpty
 
-  def generatorTraversal(gs: Set[Generator]): Traversal[GeneratorTree, Tree] =
-    generatorPrism(gs)
-      .composeTraversal(regularTraversal)
+  def generatorTraversal(gs: Set[Generator]): Traversal[GeneratorTreeF[Tree], GeneratorInputContext] =
+    generatorInputPrism(gs)
+      .composeTraversal(regularTraversal[GeneratorInputContext])
 
 }
