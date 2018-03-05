@@ -10,7 +10,7 @@ import scala.meta.gen._
   * Will print the structure of the class as it's toString.
   * Not super useful, but a simple example to test with
   */
-object SyntaxToString extends ExtensionGenerator("SyntaxToString") {
+object SyntaxToString extends Generator("SyntaxToString") {
   override def extend(d: Defn.Class): List[Stat] = {
     val syntax: Lit.String = Lit.String(d.withStats(Nil).syntax)
     val newToString: Defn.Def = q"def toString = $syntax"
@@ -19,7 +19,7 @@ object SyntaxToString extends ExtensionGenerator("SyntaxToString") {
   }
 }
 
-object PrintHi extends ExtensionGenerator("PrintHi") {
+object PrintHi extends Generator("PrintHi") {
   override def extend(c: Defn.Class): List[Stat] = {
     val hi: Lit.String = Lit.String("hi")
     val hiMethod: Defn.Def =
@@ -29,7 +29,7 @@ object PrintHi extends ExtensionGenerator("PrintHi") {
   }
 }
 
-object PrintHiInCompanion extends CompanionGenerator("PrintHiInCompanion") {
+object PrintHiInCompanion extends Generator("PrintHiInCompanion") {
   override def extendCompanion(c: Defn.Class): List[Stat] = {
     val hi: Lit.String = Lit.String("hi")
     val hiMethod: Defn.Def =
@@ -39,7 +39,7 @@ object PrintHiInCompanion extends CompanionGenerator("PrintHiInCompanion") {
   }
 }
 
-object TestRecurse extends ExtensionGenerator("TestRecurse") {
+object TestRecurse extends Generator("TestRecurse") {
   override def extend(c: Defn.Class): List[Stat] = {
     val clazz = q"@PrintHi class Foo"
 
@@ -47,7 +47,7 @@ object TestRecurse extends ExtensionGenerator("TestRecurse") {
   }
 }
 
-object LogCalls extends ManipulationGenerator("LogCalls") {
+object LogCalls extends Generator("LogCalls") {
   override def manipulate(d: Defn.Def): Defn.Def = {
     val stats = d.extract[Stat]
     val logger = q"println(${d.name.value + " was called"})"
@@ -55,7 +55,7 @@ object LogCalls extends ManipulationGenerator("LogCalls") {
   }
 }
 
-object Freeish extends TransmutationGenerator("Freeish") {
+object Freeish extends Generator("Freeish") {
   override def transmute(t: Defn.Trait): List[Defn] = {
     val names: List[Term.Name] = t.extract[Stat].collect {
       case d: Defn.Def => d.name
@@ -73,7 +73,7 @@ object Freeish extends TransmutationGenerator("Freeish") {
   }
 }
 
-object DeleteMe extends TransmutationGenerator("DeleteMe") {
+object DeleteMe extends Generator("DeleteMe") {
   override def transmute(t: Defn.Trait): List[Defn] = Nil
   override def transmute(c: Defn.Class): List[Stat] = Nil
   override def transmute(t: Defn.Type): List[Stat] = Nil
@@ -87,12 +87,12 @@ object DeleteMe extends TransmutationGenerator("DeleteMe") {
   override def transmute(t: Decl.Type): List[Stat] = Nil
 }
 
-object Abort extends ExtensionGenerator("Abort") {
+object Abort extends Generator("Abort") {
   override def extend(c: Defn.Class): List[Stat] =
     abort("Nothing to see here...")
 }
 
-object NonNull extends ParameterGenerator("NonNull") {
+object NonNull extends Generator("NonNull") {
   override def extend(p: Term.Param): List[Stat] = {
     val value = q"assert(${p.name.asTerm} != null)"
     value :: Nil

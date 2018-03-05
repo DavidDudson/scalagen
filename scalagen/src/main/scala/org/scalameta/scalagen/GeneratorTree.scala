@@ -4,13 +4,24 @@ import cats._
 import cats.free._
 import cats.implicits._
 import monocle._
-import org.scalameta.scalagen.GeneratorTree.GeneratorTreeF
 
 import scala.meta.{XtensionShow => _, _}
-import scala.meta.gen.TypeclassExtractors.retrieveAnnotExtractInstance
 import scala.meta.gen._
 
-case class GeneratorInputContext(in: Tree, generators: List[Generator])
+sealed trait GeneratorContext {
+  def input: Tree
+  def generators: List[Generator]
+}
+
+case class GeneratorInputContext(input: Tree, generators: List[Generator]) extends GeneratorContext
+
+case class GeneratorOutputContext(
+                               previousStates: Tree,
+                               appliedGenerator: Generator,
+                               remainingGenerators: List[Generator],
+                               out: Tree,
+                               ) extends GeneratorContext {
+}
 
 object GeneratorTree {
 
@@ -35,7 +46,7 @@ object GeneratorTree {
     Show.show[GeneratorTreeF[Tree]](genTraversalString(regularTraversal[Tree], _, identity[Tree]))
 
   implicit def treeCtxShowInstance: Show[GeneratorTree] =
-    _.map(_.in).show
+    _.map(_.input).show
 
   /**
     * Will print all nodes visited by the given traversal
@@ -112,7 +123,7 @@ object GeneratorTree {
     *
     * TODO: Consider moving this out of scalagen
     */
-  type GeneratorTree = Cofree[List, GeneratorInputContext]
+  type GeneratorTree = Cofree[List, GeneratorContext]
 
   /**
     * Partially applied alias for OwnerTree. Allows use as a Functor/Monad etc.
@@ -126,25 +137,6 @@ object GeneratorTree {
     Prism[GeneratorTreeF[Tree], GeneratorTree](t => {
       Option[GeneratorTree](t.map(GeneratorInputContext(_, gatherGenerators(t.head, gs))))
         .filter(_.head.generators.nonEmpty)
-    })(_.map(_.in))
-
-  private def getMatchingGenerator(a: Mod.Annot, gs: Set[Generator]): Option[Generator] =
-    a.init.tpe match {
-      case Type.Name(value) =>
-        gs.find(_.name == value)
-      case _ => None
-    }
-
-  def gatherGenerators(tree: Tree, gs: Set[Generator]): List[Generator] =
-    retrieveAnnotExtractInstance(tree)
-      .map(_.extract(tree).flatMap(getMatchingGenerator(_, gs).toList))
-      .getOrElse(Nil)
-
-  private def hasGenerator(tree: Tree, gs: Set[Generator]): Boolean =
-    gatherGenerators(tree, gs).nonEmpty
-
-  def generatorTraversal(gs: Set[Generator]): Traversal[GeneratorTreeF[Tree], GeneratorInputContext] =
-    generatorInputPrism(gs)
-      .composeTraversal(regularTraversal[GeneratorInputContext])
+    })(_.map(_.input))
 
 }

@@ -141,7 +141,7 @@ class GeneratorTreeTests extends FunSuite with Matchers {
 
   test("Generators") {
 
-    val str = GeneratorTree.genTraversalString[Tree, GeneratorInputContext](generatorTraversal(Set(DeleteMe)), ot, _.in)
+    val str = GeneratorTree.genTraversalString[Tree, GeneratorContext](generatorTraversal(Set(DeleteMe)), ot, _.in)
 
     withClue(s"""
                 |=====================

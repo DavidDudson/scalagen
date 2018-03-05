@@ -3,7 +3,6 @@ package scala.meta.gen
 import java.io.File
 import java.nio.file.Path
 
-import org.scalameta.scalagen.Runner
 import sbt._
 import sbt.Keys._
 
@@ -59,13 +58,12 @@ object GeneratorRunner {
   def apply(
       input: Seq[File],
       generators: Set[Generator],
-      recurse: Boolean,
       strm: TaskStreams,
       sourcePath: Path,
       targetPath: Path): Seq[File] = {
     input.par
       .map { f =>
-        val runner = Runner(generators, recurse)
+        val runner = Runner(generators)
 
         val text = IO.read(f)
         val parsed = text.parse[Source]

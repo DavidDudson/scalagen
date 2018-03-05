@@ -4,7 +4,7 @@ import scala.meta.gen._
 
 object Generators {
 
-  object Main extends ManipulationGenerator("Main") {
+  object Main extends ManipulationGeneratorApi("Main") {
     override def manipulate(o: Defn.Object): Defn.Object = {
       val stats = o.extract[Stat]
 
